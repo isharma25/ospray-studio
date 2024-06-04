@@ -23,6 +23,7 @@
 using namespace rkcommon::math;
 using namespace ospray;
 using rkcommon::make_unique;
+using NodePtr = ospray::sg::NodePtr;
 
 class MainWindow;
 class WindowsBuilder;
@@ -41,7 +42,7 @@ class GUIContext : public StudioContext
   void importFiles(sg::NodePtr world) override;
   void refreshRenderer();
   void updateCamera() override;
-  void refreshScene(bool resetCamera) override;
+  void refreshScene(bool resetCamera, bool enaleImport = true) override;
 
   //////////////////////////////////////////////////////////////
   // GUI-context extras
@@ -93,4 +94,5 @@ class GUIContext : public StudioContext
   std::string scene;
   
   float lockAspectRatio = 0.0;
+  std::vector<NodePtr> timeseriesImporters;
 };

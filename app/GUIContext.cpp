@@ -8,6 +8,7 @@
 // std
 #include <iostream>
 #include <stdexcept>
+#include "dirent.h"
 // ospray_sg
 #include "sg/Math.h"
 #include "sg/camera/Camera.h"
@@ -262,54 +263,79 @@ void GUIContext::saveRendererParams()
     maxContribution = r["maxContribution"].valueAs<float>();
 }
 
-void GUIContext::refreshScene(bool resetCam)
+void GUIContext::refreshScene(bool resetCam, bool enableImport)
 {
-  if (frameAccumLimit)
-    frame->accumLimit = frameAccumLimit;
-  // Check that the frame contains a world, if not create one
-  auto world = frame->hasChild("world") ? frame->childNodeAs<Node>("world")
-                                        : createNode("world", "world");
-  if (optSceneConfig == "dynamic")
-    world->child("dynamicScene").setValue(true);
-  else if (optSceneConfig == "compact")
-    world->child("compactMode").setValue(true);
-  else if (optSceneConfig == "robust")
-    world->child("robustMode").setValue(true);
-
-  world->createChild(
-      "materialref", "reference_to_material", defaultMaterialIdx);
-
-  if (!filesToImport.empty())
-    importFiles(world);
-  else if (scene != "") {
-    auto &gen = world->createChildAs<Generator>(
-        scene + "_generator",
-        "generator_" + scene);
-    gen.setMaterialRegistry(baseMaterialRegistry);
-    // The generators should reset the camera
-    resetCam = true;
-  }
-
-  if (world->isModified()) {
-    // Cancel any in-progress frame as world->render() will modify live device
-    // parameters
-    frame->cancelFrame();
-    frame->waitOnFrame();
-    world->render();
-  }
-
-  frame->add(world);
-
-  if (resetCam && !sgScene) {
-    // Switch back to default-camera before modifying any parameters
-    changeToDefaultCamera();
-    mainWindow->resetArcball();
-  }
+      // Check that the frame contains a world, if not create one
+    auto world = frame->hasChild("world") ? frame->childNodeAs<Node>("world")
+                                          : createNode("world", "world");
   
-  updateCamera();
-  auto &fb = frame->childAs<FrameBuffer>("framebuffer");
-  fb.resetAccumulation();
-}
+    if (frameAccumLimit)
+      frame->accumLimit = frameAccumLimit;
+    if (optSceneConfig == "dynamic")
+      world->child("dynamicScene").setValue(true);
+    else if (optSceneConfig == "compact")
+      world->child("compactMode").setValue(true);
+    else if (optSceneConfig == "robust")
+      world->child("robustMode").setValue(true);
+
+    world->createChild(
+        "materialref", "reference_to_material", defaultMaterialIdx);
+
+    // the following if condition stops ANimationWidget from reimport with each
+    // timestep update
+    // TODO:: find a better solution to the if condition
+    if (folderToImport != "") {
+      std::map<std::string, std::string> loadSequence;
+      DIR *dir;
+      struct dirent *f;
+      if ((dir = opendir(folderToImport.c_str())) != NULL) {
+        while ((f = readdir(dir)) != NULL) {
+          if (*f->d_name != '.' && '..') {
+            loadSequence[f->d_name] = folderToImport + '/' + f->d_name;
+            // uncomment following to print content of directory being imported
+            // std::cout << f->d_name << std::endl;
+          }
+        }
+        closedir(dir);
+        folderToImport = "";
+      } else {
+        perror("could not open directory");
+        return;
+      }
+      if (loadSequence.size())
+        for (auto s : loadSequence)
+          filesToImport.emplace_back(s.second);
+    }
+    if (!filesToImport.empty()) {
+      importFiles(world);
+    } else if (scene != "") {
+      auto &gen = world->createChildAs<Generator>(
+          scene + "_generator", "generator_" + scene);
+      gen.setMaterialRegistry(baseMaterialRegistry);
+      // The generators should reset the camera
+      resetCam = true;
+    }
+
+    if (world->isModified()) {
+      // Cancel any in-progress frame as world->render() will modify live device
+      // parameters
+      frame->cancelFrame();
+      frame->waitOnFrame();
+      world->render();
+    }
+
+    frame->add(world);
+
+    if (resetCam && !sgScene) {
+      // Switch back to default-camera before modifying any parameters
+      changeToDefaultCamera();
+      mainWindow->resetArcball();
+    }
+
+    updateCamera();
+    auto &fb = frame->childAs<FrameBuffer>("framebuffer");
+    fb.resetAccumulation();
+  }
 
 void GUIContext::addToCommandLine(std::shared_ptr<CLI::App> app) {
   app->add_flag(
@@ -358,7 +384,10 @@ void GUIContext::importFiles(NodePtr world)
         mainCamera->child("uniqueCameraName").valueAs<std::string>()) =
         mainCamera;
   }
-
+  int timeseriesCounter{0};
+  auto transferFunction = createNode("transferFunction",
+      "transfer_function_turbo"); // to keep a common transfer function for the
+                                  // timeseries volumes
   for (auto file : filesToImport) {
     try {
       rkcommon::FileName fileName(file);
@@ -369,9 +398,12 @@ void GUIContext::importFiles(NodePtr world)
         importScene(shared_from_this(), fileName);
         sgScene = true;
       } else {
-        std::cout << "Importing: " << file << std::endl;
-
-        auto importer = getImporter(world, file, optReloadAssets);
+        std::cout << "Importing: " << file << std::endl;   
+        std::shared_ptr<Importer> importer;
+        if (optTimeseries)
+          importer = getImporter(nullptr, file, optReloadAssets);
+        else 
+          importer = getImporter(world, file, optReloadAssets);
         if (importer) {
           auto vp = importer->getVolumeParams();
           if (volumeParams->children().size() > 0 && vp) {
@@ -398,6 +430,7 @@ void GUIContext::importFiles(NodePtr world)
           importer->setArguments(studioCommon.argc, (char **)studioCommon.argv);
           importer->setScheduler(scheduler);
           importer->setAnimationList(animationManager->getAnimations());
+          importer->setTransferFunction(transferFunction);
           if (optInstanceConfig == "dynamic")
             importer->setInstanceConfiguration(
                 InstanceConfiguration::DYNAMIC);
@@ -410,6 +443,8 @@ void GUIContext::importFiles(NodePtr world)
 
           importer->importScene();
         }
+        timeseriesImporters.push_back(importer);
+        timeseriesCounter++;
       }
     } catch (const std::exception &e) {
       std::cerr << "Failed to open file '" << file << "'!\n";
@@ -433,9 +468,20 @@ void GUIContext::importFiles(NodePtr world)
     }
   }
   filesToImport.clear();
+  range1f timeseries{0.f, 1.f};
+  if (optTimeseries) {
+    timeseries.lower = 0;
+    timeseries.upper = timeseriesCounter;
+    world->createChild("timeseriesImporters", "bool", true);
+    world->add(timeseriesImporters[0]); // start with the first importer of the time-series
 
-  // Initializes time range for newly imported models
-  mainWindow->animationWidget->init();
+    // in case of a time series re-initialize animationWidget with a different
+    // constructor
+    mainWindow->animationWidget = std::make_shared<AnimationWidget>(
+        "timeseries", timeseries, frame, timeseriesImporters,std::static_pointer_cast<GUIContext>(shared_from_this()));
+  } else
+    // Initializes time range for newly imported models
+    mainWindow->animationWidget->init();
 
   const auto &newCameras = sgFileCameras ? *sgFileCameras : *cameras;
   if (!newCameras.empty()) {

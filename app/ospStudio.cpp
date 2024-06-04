@@ -59,11 +59,22 @@ void StudioCommon::splitPluginArguments()
 void StudioContext::addToCommandLine(std::shared_ptr<CLI::App> app)
 {
   volumeParams = std::make_shared<sg::VolumeParams>();
+  
   app->add_option(
+    "--timeseries",
+    optTimeseries,
+    "load files from folder as timeseries"
+  )->check(CLI::IsMember({true, false}));
+    app->add_option(
     "files",
     filesToImport,
     "The list of files to import"
   )->check(CLI::detail::ExistingFileValidator());
+  app->add_option(
+    "--folder",
+    folderToImport,
+    "The folder with list of files to import/ for timeseries add --timeseries"
+  )->check(CLI::detail::ExistingDirectoryValidator());
   app->add_option(
     "--reload",
     optReloadAssets,

@@ -18,7 +18,8 @@ OSPSG_INTERFACE std::map<std::string, std::string> importerMap = {
     {"spherical", "importer_raw"},
     {"vdb", "importer_vdb"},
     {"pcd", "importer_pcd"},
-    {"pvol", "importer_pvol"}};
+    {"pvol", "importer_pvol"},
+    {"am", "importer_amira"}};
 
 Importer::Importer() {}
 
@@ -314,7 +315,7 @@ OSPSG_INTERFACE void importScene(
   }
 }
 
-// global assets catalogue
+// global assets catalogue and importers List
 AssetsCatalogue cat;
 
 } // namespace sg

@@ -4,10 +4,18 @@
 #pragma once
 #include <string>
 #include "../AnimationManager.h"
+#include "sg/Frame.h"
+#include "app/GUIContext.h"
+using NodePtr = ospray::sg::NodePtr;
 
 class AnimationWidget
 {
  public:
+  AnimationWidget(std::string name,
+      const range1f &_timeRangeManual,
+      NodePtr frame,
+      std::vector<NodePtr> &timeseriesImporters,
+      std::shared_ptr<GUIContext> gui);
   AnimationWidget(
       std::string name, std::shared_ptr<AnimationManager> animationManager);
   ~AnimationWidget();
@@ -47,7 +55,6 @@ class AnimationWidget
     return play;
   }
 
-
  private:
   bool showUI{false};
   bool play{false};
@@ -58,4 +65,10 @@ class AnimationWidget
   std::chrono::time_point<std::chrono::system_clock> lastUpdated;
   float time{0.0f};
   float shutter{0.0f};
+  range1f timeRangeManual;
+  NodePtr frame;
+  std::vector<NodePtr> timeseriesImporters;
+  bool activeWorld{false};
+  std::shared_ptr<GUIContext> gui;
+  int worldCounter{-1};
 };

@@ -127,7 +127,7 @@ class StudioContext : public std::enable_shared_from_this<StudioContext>
   virtual bool parseCommandLine() = 0;
   virtual void addToCommandLine(std::shared_ptr<CLI::App> app);
   virtual void importFiles(sg::NodePtr world) = 0;
-  virtual void refreshScene(bool resetCam) = 0;
+  virtual void refreshScene(bool resetCam, bool enaleImport = true) = 0;
   virtual void updateCamera() = 0;
   virtual void selectCamera() = 0;
   virtual void updateCameraIndices(uint32_t idx);
@@ -141,6 +141,7 @@ class StudioContext : public std::enable_shared_from_this<StudioContext>
   std::shared_ptr<sg::Scheduler> scheduler;
 
   std::vector<std::string> filesToImport;
+  std::string folderToImport{""};
 
   // global context camera settings for loading external cameras
   std::shared_ptr<affine3f> cameraView{nullptr};
@@ -160,7 +161,7 @@ class StudioContext : public std::enable_shared_from_this<StudioContext>
   void *getMainWindow() {
     return ctxMainWindow;
   };
-
+  bool optTimeseries{false};
   bool optReloadAssets{false};
   bool optResetCameraOnLoad{true};
   std::string optRendererTypeStr{"pathtracer"};

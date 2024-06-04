@@ -100,6 +100,7 @@ add_library(ospray_sg SHARED
   importer/raw.cpp
   importer/particleVolume.cpp
   importer/vdb.cpp
+  importer/Amira.cpp
 
   renderer/Material.cpp
   renderer/MaterialReference.cpp

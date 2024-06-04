@@ -124,6 +124,10 @@ struct OSPSG_INTERFACE Importer : public Node
     scheduler = _scheduler;
   }
 
+  inline void setTransferFunction(NodePtr _tfn) {
+    tfn = _tfn;
+  }
+
   float pointSize{0.0f};
   bool importCameras{false};
 
@@ -136,6 +140,7 @@ struct OSPSG_INTERFACE Importer : public Node
   std::vector<sg::Animation> *animations = nullptr;
   NodePtr volumeParams;
   NodePtr lightsManager;
+  NodePtr tfn;
   sg::FrameBuffer *fb{nullptr};
   InstanceConfiguration ic{STATIC};
   int argc{0};
@@ -150,7 +155,7 @@ extern OSPSG_INTERFACE std::map<std::string, std::string> importerMap;
 // Providing a unique transform instance as root to add existing imported model to, 
 // should probably be the responsibility of the calling routine
 inline std::shared_ptr<Importer> getImporter(
-    NodePtr root, rkcommon::FileName fileName, bool reloadAsset = false)
+    NodePtr root, rkcommon::FileName fileName, bool reloadAsset = true)
 {
   // Get the absolute path to the file for use in AssetsCatalogue 
   rkcommon::FileName fullName = fileName.canonical();
@@ -199,13 +204,14 @@ inline std::shared_ptr<Importer> getImporter(
 
     instanceXfm->add(rootXfmNode);
 
-    root->add(instanceXfm);
+    if (root)
+      root->add(instanceXfm);
 
     return nullptr;
 
   } else {
     nodeName = baseName + "_importer";
-    if (root->hasChild(nodeName)) {
+    if (root && root->hasChild(nodeName)) {
       auto count = ++root->child(nodeName)["count"].valueAs<int>();
       root->child(nodeName)["count"] = count;
       nodeName += "_" + std::to_string(count);
@@ -223,7 +229,8 @@ inline std::shared_ptr<Importer> getImporter(
     }
     importNode->setFileName(fileName);
     cat.insert(AssetsCatalogue::value_type(fullName, importNode));
-    root->add(importNode);
+    if (root)
+      root->add(importNode);
     return importNode;
   }
 }

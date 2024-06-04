@@ -390,6 +390,12 @@ namespace ospray {
 
     cpp::VolumetricModel model(vol);
     if (node.hasChildOfType(sg::NodeType::TRANSFER_FUNCTION)) {
+      // update the value range of the tfn in case it is shared with multiple
+      // volumes for example for timeseries
+      if (volNode->hasChild("value")) {
+        auto valueRange = volNode->child("value").valueAs<range1f>();
+        node["transferFunction"].child("value") = valueRange;
+      }
       model.setParam("transferFunction",
                      node["transferFunction"].valueAs<cpp::TransferFunction>());
     } else

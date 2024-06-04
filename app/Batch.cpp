@@ -475,7 +475,7 @@ void BatchContext::renderAnimation()
   }
 }
 
-void BatchContext::refreshScene(bool resetCam)
+void BatchContext::refreshScene(bool resetCam, bool reset)
 {
   if (frameAccumLimit)
     frame->accumLimit = frameAccumLimit;
