@@ -388,6 +388,8 @@ void GUIContext::importFiles(NodePtr world)
   auto transferFunction = createNode("transferFunction",
       "transfer_function_turbo"); // to keep a common transfer function for the
                                   // timeseries volumes
+  transferFunction->child("value").setValue(range1f(0.f, 6000.f));
+  world->add(transferFunction);
   for (auto file : filesToImport) {
     try {
       rkcommon::FileName fileName(file);
@@ -430,7 +432,7 @@ void GUIContext::importFiles(NodePtr world)
           importer->setArguments(studioCommon.argc, (char **)studioCommon.argv);
           importer->setScheduler(scheduler);
           importer->setAnimationList(animationManager->getAnimations());
-          importer->setTransferFunction(transferFunction);
+          // importer->setTransferFunction(transferFunction);
           if (optInstanceConfig == "dynamic")
             importer->setInstanceConfiguration(
                 InstanceConfiguration::DYNAMIC);

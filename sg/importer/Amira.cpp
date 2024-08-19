@@ -200,16 +200,16 @@ void AmiraImporter::importScene()
   volume->createChild("gridSpacing", "vec3f", amiraData.gridSpacing);
   
   // if importer has a shared transfer function; use that first
-  if (tfn)
-    volume->add(tfn);
-  else {
-    auto tf = createNode("transferFunction", "transfer_function_turbo");
-    // adding value range here could be redundant as it is added also in
-    // RenderScene
-    auto valueRange = volume->child("value").valueAs<range1f>();
-    tf->child("value") = valueRange;
-    volume->add(tf);
-  }
+  // if (tfn)
+  //   volume->add(tfn);
+  // else {
+  //   auto tf = createNode("transferFunction", "transfer_function_turbo");
+  //   // adding value range here could be redundant as it is added also in
+  //   // RenderScene
+  //   auto valueRange = volume->child("value").valueAs<range1f>();
+  //   tf->child("value") = valueRange;
+  //   volume->add(tf);
+  // }
 
   rootNode->add(volume);
 

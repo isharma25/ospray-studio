@@ -225,9 +225,9 @@ namespace ospray {
       }
       world.commit();
       break;
-    case NodeType::TRANSFER_FUNCTION:
-      tfns.pop();
-      break;
+    // case NodeType::TRANSFER_FUNCTION:
+    //   tfns.pop();
+    //   break;
     case NodeType::GEOMETRY:
       createGeometry(node);
       break;
